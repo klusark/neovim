@@ -861,8 +861,6 @@ intro_message (
 
   /* blanklines = screen height - # message lines */
   blanklines = (int)Rows - ((sizeof(lines) / sizeof(char *)) - 1);
-  if (!p_cp)
-    blanklines += 4;      /* add 4 for not showing "Vi compatible" message */
 
   /* Don't overwrite a statusline.  Depends on 'cmdheight'. */
   if (p_ls > 1)
@@ -881,9 +879,7 @@ intro_message (
     for (i = 0; i < (int)(sizeof(lines) / sizeof(char *)); ++i) {
       p = lines[i];
       if (p == NULL) {
-        if (!p_cp)
-          break;
-        continue;
+        break;
       }
       if (sponsor != 0) {
         if (strstr(p, "children") != NULL)

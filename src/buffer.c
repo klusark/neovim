@@ -215,9 +215,9 @@ open_buffer (
   /* When reading stdin, the buffer contents always needs writing, so set
    * the changed flag.  Unless in readonly mode: "ls | gview -".
    * When interrupted and 'cpoptions' contains 'i' set changed flag. */
-  if ((got_int && vim_strchr(p_cpo, CPO_INTMOD) != NULL)
+  if (got_int
       || modified_was_set               /* ":set modified" used in autocmd */
-      || (aborting() && vim_strchr(p_cpo, CPO_INTMOD) != NULL)
+      || aborting()
       )
     changed();
   else if (retval != FAIL && !read_stdin)

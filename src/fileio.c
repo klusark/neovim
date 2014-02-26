@@ -304,21 +304,6 @@ readfile (
 
   curbuf->b_no_eol_lnum = 0;    /* in case it was set by the previous read */
 
-  /*
-   * If there is no file name yet, use the one for the read file.
-   * BF_NOTEDITED is set to reflect this.
-   * Don't do this for a read from a filter.
-   * Only do this when 'cpoptions' contains the 'f' flag.
-   */
-  if (curbuf->b_ffname == NULL
-      && !filtering
-      && fname != NULL
-      && vim_strchr(p_cpo, CPO_FNAMER) != NULL
-      && !(flags & READ_DUMMY)) {
-    if (set_rw_fname(fname, sfname) == FAIL)
-      return FAIL;
-  }
-
   /* Remember the initial values of curbuf, curbuf->b_ffname and
    * curbuf->b_fname to detect whether they are altered as a result of
    * executing nasty autocommands.  Also check if "fname" and "sfname"
@@ -2597,25 +2582,6 @@ buf_write (
    * the line. */
   ex_no_reprint = TRUE;
 
-  /*
-   * If there is no file name yet, use the one for the written file.
-   * BF_NOTEDITED is set to reflect this (in case the write fails).
-   * Don't do this when the write is for a filter command.
-   * Don't do this when appending.
-   * Only do this when 'cpoptions' contains the 'F' flag.
-   */
-  if (buf->b_ffname == NULL
-      && reset_changed
-      && whole
-      && buf == curbuf
-      && !bt_nofile(buf)
-      && !filtering
-      && (!append || vim_strchr(p_cpo, CPO_FNAMEAPP) != NULL)
-      && vim_strchr(p_cpo, CPO_FNAMEW) != NULL) {
-    if (set_rw_fname(fname, sfname) == FAIL)
-      return FAIL;
-    buf = curbuf;           /* just in case autocmds made "buf" invalid */
-  }
 
   if (sfname == NULL)
     sfname = fname;
@@ -2757,11 +2723,6 @@ buf_write (
           else
             buf->b_flags &= ~BF_WRITE_MASK;
         }
-        if (reset_changed && buf->b_changed && !append
-            && (overwriting || vim_strchr(p_cpo, CPO_PLUS) != NULL))
-          /* Buffer still changed, the autocommands didn't work
-           * properly. */
-          return FAIL;
         return OK;
       }
       if (!aborting())
@@ -2894,13 +2855,8 @@ buf_write (
     file_readonly = check_file_readonly(fname, (int)perm);
 
     if (!forceit && file_readonly) {
-      if (vim_strchr(p_cpo, CPO_FWRITE) != NULL) {
-        errnum = (char_u *)"E504: ";
-        errmsg = (char_u *)_(err_readonly);
-      } else   {
-        errnum = (char_u *)"E505: ";
-        errmsg = (char_u *)_("is read-only (add ! to override)");
-      }
+      errnum = (char_u *)"E505: ";
+      errmsg = (char_u *)_("is read-only (add ! to override)");
       goto fail;
     }
 
@@ -3279,17 +3235,6 @@ nobackup:
        * Make a backup by renaming the original file.
        */
       /*
-       * If 'cpoptions' includes the "W" flag, we don't want to
-       * overwrite a read-only file.  But rename may be possible
-       * anyway, thus we need an extra check here.
-       */
-      if (file_readonly && vim_strchr(p_cpo, CPO_FWRITE) != NULL) {
-        errnum = (char_u *)"E504: ";
-        errmsg = (char_u *)_(err_readonly);
-        goto fail;
-      }
-
-      /*
        *
        * Form the backup file name - change path/fo.o.h to
        * path/fo.o.h.bak Try all directories in 'backupdir', first one
@@ -3358,24 +3303,6 @@ nobackup:
         goto fail;
       }
     }
-  }
-
-#if defined(UNIX) && !defined(ARCHIE)
-  /* When using ":w!" and the file was read-only: make it writable */
-  if (forceit && perm >= 0 && !(perm & 0200) && st_old.st_uid == getuid()
-      && vim_strchr(p_cpo, CPO_FWRITE) == NULL) {
-    perm |= 0200;
-    (void)mch_setperm(fname, perm);
-    made_writable = TRUE;
-  }
-#endif
-
-  /* When using ":w!" and writing to the current file, 'readonly' makes no
-   * sense, reset it, unless 'Z' appears in 'cpoptions'.  */
-  if (forceit && overwriting && vim_strchr(p_cpo, CPO_KEEPRO) == NULL) {
-    buf->b_p_ro = FALSE;
-    need_maketitle = TRUE;          /* set window title later */
-    status_redraw_all();            /* redraw status lines later */
   }
 
   if (end > buf->b_ml.ml_line_count)

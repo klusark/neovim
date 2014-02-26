@@ -673,13 +673,10 @@ int curwin_col_off(void)         {
 
 /*
  * Return the difference in column offset for the second screen line of a
- * wrapped line.  It's 8 if 'number' or 'relativenumber' is on and 'n' is in
- * 'cpoptions'.
+ * wrapped line. 
  */
 int win_col_off2(win_T *wp)
 {
-  if ((wp->w_p_nu || wp->w_p_rnu) && vim_strchr(p_cpo, CPO_NUMCOL) != NULL)
-    return number_width(wp) + 1;
   return 0;
 }
 
